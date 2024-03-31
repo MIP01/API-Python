@@ -24,7 +24,7 @@ class Penjual(db.Model):
     id_penjual = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nama_penjual = db.Column(db.String(155), nullable=False)
     username = db.Column(db.String(100), nullable=False, unique=True)
-    password = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(355), nullable=False)
     alamat = db.Column(db.String(355), nullable=False)
     telp = db.Column(db.Integer, nullable=False)
     saldo = db.Column(db.Integer)

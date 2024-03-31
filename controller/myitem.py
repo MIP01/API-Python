@@ -1,6 +1,6 @@
 from model.mymodel import session, Barang, Penjual
 from flask import jsonify, request
-from controller.myauth import auth
+from controller.myauth import token_required
 
 
 def get_data():
@@ -47,11 +47,8 @@ def get_idata(barang_id):
 
     return jsonify(data_list)
 
-@auth.login_required  
-def insert_data():
-    # Dapatkan pengguna yang saat ini diautentikasi
-    current_user = request.authorization.username  # Ini akan memberikan username yang diautentikasi
-
+@token_required
+def insert_data(current_user):
     data = request.get_json()
     nama = data.get('nama')
     content = data.get('content')
@@ -59,33 +56,26 @@ def insert_data():
     stok = data.get('stok')
 
     if nama is not None and harga is not None and stok is not None:
-        # Dapatkan id_penjual dari tabel Penjual berdasarkan username yang diautentikasi
-        penjual = session.query(Penjual).filter_by(username=current_user).first()
-        id_penjual = penjual.id_penjual
-
-        new_barang = Barang(nama=nama, harga=harga, stok=stok, content=content, id_penjual=id_penjual)
+        new_barang = Barang(nama=nama, harga=harga, stok=stok, content=content, id_penjual=current_user.id_penjual)
         session.add(new_barang)
         session.commit()
         return jsonify({'message': 'Data berhasil dimasukkan ke database'})
     else:
         return jsonify({'message': 'Data yang diberikan tidak lengkap'})
 
-@auth.login_required    
-def update(barang_id):
-    current_user = request.authorization.username
+
+@token_required
+def update(current_user, barang_id):
     data = session.query(Barang).filter_by(id=barang_id).first()
 
     if data:
-        # Periksa apakah pengguna saat ini adalah pemilik barang yang akan diperbarui
-        penjual = session.query(Penjual).filter_by(username=current_user).first()
-        
         # Pastikan bahwa penjual saat ini adalah pemilik barang yang akan diperbarui
-        if data.id_penjual == penjual.id_penjual:
-            update = request.get_json()
-            nama = update.get('nama')
-            content = update.get('content')
-            harga = update.get('harga')
-            stok = update.get('stok')
+        if current_user.id_penjual == data.id_penjual:
+            update_data = request.get_json()
+            nama = update_data.get('nama')
+            content = update_data.get('content')
+            harga = update_data.get('harga')
+            stok = update_data.get('stok')
 
             if nama:
                 data.nama = nama
@@ -103,18 +93,13 @@ def update(barang_id):
     else:
         return jsonify({'message': 'Data tidak ditemukan'})
     
-@auth.login_required
-def delete(barang_id):
-    current_user = request.authorization.username
-
+@token_required
+def delete(current_user, barang_id):
     data = session.query(Barang).filter_by(id=barang_id).first()
 
     if data:
-        # Periksa apakah pengguna saat ini adalah pemilik barang yang akan dihapus
-        penjual = session.query(Penjual).filter_by(username=current_user).first()
-
-        if penjual and data.id_penjual == penjual.id_penjual:
-            # Hapus data jika pengguna saat ini adalah pemilik barang
+        # Pastikan bahwa penjual saat ini adalah pemilik barang yang akan dihapus
+        if current_user.id_penjual == data.id_penjual:
             session.delete(data)
             session.commit()
             return jsonify({'message': 'Data berhasil dihapus'})
